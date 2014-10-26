@@ -1,0 +1,8 @@
+main
+	__CC2DW
+	myADC
+		Delay_10us
+	Div_32x32_U
+	Mul_16x16_U
+	Mul_8x8_U
+	sendChar
