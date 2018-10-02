@@ -23,11 +23,11 @@ from probe_util import cnc_comm_init
 
 xMin = 0.25
 xMax = 1.75
-xSteps = 8
+xSteps = 4
 
 yMin = -2.75
 yMax = -0.25
-ySteps = 12
+ySteps = 6
 
 #check to make sure a valid file is picked first
 Tk().withdraw() # we don't want a full GUI, so keep the root window from appearing
@@ -117,13 +117,20 @@ zeroZPauseInserted = False
 
 with open(filename) as f:
   for line in f:
+    
+    #remove windowness (end of lines)
+    line = re.sub("\r","",line)
+    
     #make everything capital letters
     line = line.upper()
 
     #filter out comment lines
-    match = re.search("\(",line)
+    match = re.search("(\(.*\))",line)
     if match:
-      continue
+      comment = match.group(1)
+      line = re.sub("\(.*\)","",line)
+    else:
+      comment = "";
       
     #check for metric
     match = re.search("G21",line)
@@ -144,6 +151,7 @@ with open(filename) as f:
         if not initalPointFound:
           oldX = curX
           oldY = curY
+          if curX != 0.0 and curY != 0.0:
           initalPointFound = True
           #offset table such that this point is Z = 0
           z_out=twodinterp(x,y,Z,curX,curY)
@@ -169,6 +177,8 @@ with open(filename) as f:
         line = re.sub("X[0-9.-]+","X{0:.4f}".format(midX * unitFactor),line)
         line = re.sub("Y[0-9.-]+","Y{0:.4f}".format(midY * unitFactor),line)
           
+        #ignore Z's before first point, map has not been normalized
+        if initalPointFound:
         #is there a Z also in this line that needs to be modified  
         match = re.search("Z([0-9.-]+)",line)
         if match:
@@ -182,6 +192,7 @@ with open(filename) as f:
           z_out=twodinterp(x,y,Z,midX,midY)
           newZ = curZ + z_out
           line = re.sub("(Y[0-9.-]+)","\g<1> Z{0:.4f}".format(newZ * unitFactor),line)
+            
         oldX = midX
         oldY = midY  
         
@@ -197,6 +208,14 @@ with open(filename) as f:
             z_out=twodinterp(x,y,Z,curX,curY)
             newZ = oldZ + z_out
             line = re.sub("Z[0-9.-]+","Z{0:.4f}".format(newZ * unitFactor),line)
+            line = line +"G4 P0.5\n"
+
+      #reinsert comment
+      match = re.search("\n",line)
+      if match:
+        line = re.sub("\n",comment+"\n",line)
+      else:
+        line = line + comment
 
       #write out line to file
       outF.write(line)
