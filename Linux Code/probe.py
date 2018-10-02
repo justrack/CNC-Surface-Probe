@@ -22,8 +22,8 @@ from probe_util import cnc_comm_init
 
 
 xMin = 0.25
-xMax = 1.75
-xSteps = 4
+xMax = 5.75
+xSteps = 12
 
 yMin = -2.75
 yMax = -0.25
@@ -83,6 +83,10 @@ for j in range(len(y)):
         ser.write('r')
         serial_output=ser.readline()
         Z[j][i] = float(serial_output)
+
+        #check for bad reading from probe
+        if(Z[j][i] == 9.999):
+            sys.exit("Bad reading from probe. Ensure it is set to inches")
         
         #update plot
         ax.clear()
@@ -152,11 +156,11 @@ with open(filename) as f:
           oldX = curX
           oldY = curY
           if curX != 0.0 and curY != 0.0:
-          initalPointFound = True
-          #offset table such that this point is Z = 0
-          z_out=twodinterp(x,y,Z,curX,curY)
-          z = [[element1-z_out for element1 in element2] for element2 in Z]
-          Z = z
+            initalPointFound = True
+            #offset table such that this point is Z = 0
+            z_out=twodinterp(x,y,Z,curX,curY)
+            z = [[element1-z_out for element1 in element2] for element2 in Z]
+            Z = z
       
         #Var Defs
         # curX/Y is final destination point
@@ -179,19 +183,19 @@ with open(filename) as f:
           
         #ignore Z's before first point, map has not been normalized
         if initalPointFound:
-        #is there a Z also in this line that needs to be modified  
-        match = re.search("Z([0-9.-]+)",line)
-        if match:
-          oldZ = float(match.group(1)) / unitFactor
-          curZ = oldZ
-          z_out=twodinterp(x,y,Z,midX,midY)
-          newZ = oldZ + z_out
-          line = re.sub("Z[0-9.-]+","Z{0:.4f}".format(newZ * unitFactor),line)
-        #if not add one after Y 
-        else:
-          z_out=twodinterp(x,y,Z,midX,midY)
-          newZ = curZ + z_out
-          line = re.sub("(Y[0-9.-]+)","\g<1> Z{0:.4f}".format(newZ * unitFactor),line)
+          #is there a Z also in this line that needs to be modified  
+          match = re.search("Z([0-9.-]+)",line)
+          if match:
+            oldZ = float(match.group(1)) / unitFactor
+            curZ = oldZ
+            z_out=twodinterp(x,y,Z,midX,midY)
+            newZ = oldZ + z_out
+            line = re.sub("Z[0-9.-]+","Z{0:.4f}".format(newZ * unitFactor),line)
+          #if not add one after Y 
+          else:
+            z_out=twodinterp(x,y,Z,midX,midY)
+            newZ = curZ + z_out
+            line = re.sub("(Y[0-9.-]+)","\g<1> Z{0:.4f}".format(newZ * unitFactor),line)
             
         oldX = midX
         oldY = midY  
@@ -216,8 +220,8 @@ with open(filename) as f:
         line = re.sub("\n",comment+"\n",line)
       else:
         line = line + comment
-
-      #write out line to file
+        
+      #write out line to file  
       outF.write(line)
       
       #insert zero Z pause if the time is right
